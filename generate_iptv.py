@@ -97,17 +97,22 @@ def resolve_stream_url(channel: dict) -> tuple[dict, str | None]:
     try:
         resp = requests.get(play_url, timeout=15)
         resp.raise_for_status()
-        real = resp.json().get("u", "")
+        data = resp.json()
+        real = data.get("u", "")
         if real:
             return channel, real
-        print(f"  [{chn_name}] playUrl响应中无'u'字段")
-        return channel, None
+        if isinstance(data.get("data"), list) and len(data["data"]) > 0:
+            real = data["data"][0].get("url", "")
+            if real:
+                return channel, real
+        print(f"  [{chn_name}] playUrl响应中无法提取流地址，使用原始地址")
+        return channel, play_url
     except requests.RequestException as e:
-        print(f"  [{chn_name}] 流地址解析失败: {e}")
-        return channel, None
+        print(f"  [{chn_name}] 流地址解析失败: {e}，使用原始地址")
+        return channel, play_url
     except (json.JSONDecodeError, AttributeError, TypeError) as e:
-        print(f"  [{chn_name}] playUrl响应解析失败: {e}")
-        return channel, None
+        print(f"  [{chn_name}] playUrl响应解析失败: {e}，使用原始地址")
+        return channel, play_url
 
 
 def process_isp(code: str, name: str, output: str):
