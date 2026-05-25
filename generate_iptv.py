@@ -105,7 +105,7 @@ def resolve_stream_url(channel: dict) -> tuple[dict, str | None]:
     except requests.RequestException as e:
         print(f"  [{chn_name}] 流地址解析失败: {e}")
         return channel, None
-    except (json.JSONDecodeError, KeyError) as e:
+    except (json.JSONDecodeError, AttributeError, TypeError) as e:
         print(f"  [{chn_name}] playUrl响应解析失败: {e}")
         return channel, None
 
@@ -130,7 +130,12 @@ def process_isp(code: str, name: str, output: str):
     with ThreadPoolExecutor(max_workers=15) as executor:
         futures = {executor.submit(resolve_stream_url, ch): ch for ch in channels}
         for future in as_completed(futures):
-            ch, real_url = future.result()
+            try:
+                ch, real_url = future.result()
+            except Exception as e:
+                ch = futures[future]
+                print(f"  [ERR] {ch.get('chnName', 'Unknown')} 处理异常: {e}")
+                continue
             if real_url:
                 extinf = format_extinf(ch)
                 lines.append(extinf)
