@@ -15,6 +15,7 @@ ISP_CONFIGS = [
 ]
 
 API_URL_TEMPLATE = "http://live.epg.gitv.tv/tagNewestEpgList/{isp}/1/100/0.json"
+CHNINFOS_API_URL_TEMPLATE = "http://live.epg.gitv.tv/chnInfos/{isp}/0.json"
 
 
 def get_group(chn_name: str) -> str:
@@ -35,17 +36,17 @@ def clean_tvg_name(chn_name: str) -> str:
     return re.sub(r"-?(?:高清|超清|8M)", "", chn_name).strip("- ")
 
 
-def format_extinf(channel: dict) -> str:
+def format_extinf(channel: dict, logo_url: str = "") -> str:
     chn_name = channel.get("chnName", "")
     group = get_group(chn_name)
     tvg_name = clean_tvg_name(chn_name)
-    chn_num_raw = channel.get("chnNum")
-    chn_num = str(chn_num_raw) if chn_num_raw is not None else ""
+    tvg_id = channel.get("chnCode", "")
 
     extinf = (
         f'#EXTINF:-1 group-title="{group}"'
         f' tvg-name="{tvg_name}"'
-        f' tvg-chno="{chn_num}",'
+        f' tvg-id="{tvg_id}"'
+        f' tvg-logo="{logo_url}",'
         f'{chn_name}'
     )
     return extinf
@@ -66,6 +67,32 @@ def fetch_epg(isp: str) -> dict | None:
         return None
     except json.JSONDecodeError as e:
         print(f"[{isp}] JSON解析失败: {e}")
+        return None
+
+
+def fetch_chninfos(isp: str) -> dict[str, str] | None:
+    url = CHNINFOS_API_URL_TEMPLATE.format(isp=isp)
+    try:
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("code") == "A000000":
+            logo_map = {}
+            for item in data.get("data", []):
+                chn_code = item.get("chnCode", "")
+                if not chn_code:
+                    continue
+                logo = item.get("bigChnIcon") or item.get("chnIcon") or ""
+                if logo:
+                    logo_map[chn_code] = logo
+            return logo_map
+        print(f"[{isp}] chnInfos API返回异常: code={data.get('code')}, message={data.get('message')}")
+        return None
+    except requests.RequestException as e:
+        print(f"[{isp}] chnInfos网络请求失败: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"[{isp}] chnInfos JSON解析失败: {e}")
         return None
 
 
@@ -122,6 +149,13 @@ def process_isp(code: str, name: str, output: str):
     channels = data.get("data", [])
     print(f"[{name}] 共 {len(channels)} 个频道条目")
 
+    logo_map = fetch_chninfos(code)
+    if logo_map:
+        print(f"[{name}] 获取到 {len(logo_map)} 个台标信息")
+    else:
+        print(f"[{name}] 未获取到台标信息，将使用空logo")
+        logo_map = {}
+
     channels = dedup_channels(channels)
     print(f"[{name}] 去重后 {len(channels)} 个频道")
 
@@ -137,7 +171,8 @@ def process_isp(code: str, name: str, output: str):
                 print(f"  [ERR] {ch.get('chnName', 'Unknown')} 处理异常: {e}")
                 continue
             if real_url:
-                results[idx] = (format_extinf(ch), real_url)
+                logo_url = logo_map.get(ch.get("chnCode", ""), "")
+                results[idx] = (format_extinf(ch, logo_url), real_url)
                 print(f"  [OK] {ch.get('chnName')}")
 
     lines = []
