@@ -72,7 +72,7 @@ http://解析后的真实流地址/playlist.m3u8?...
 - `group-title`：关键词匹配分配的分组名
 - `tvg-name`：清洗后的频道名（去除 `高清`、`超清`、`-8M` 等画质后缀）
 - `tvg-id`：频道唯一标识（来自 `chnCode` 字段）
-- `tvg-logo`：频道台标 URL（优先取 `bigChnIcon`，为空则取 `chnIcon`）
+- `tvg-logo`：频道台标 URL（取自 `chnIcon` 字段）
 - 显示名：仅频道名
 - 时长：`-1`（直播流）
 - 流地址：从二级 playUrl 请求解析出的真实播放地址

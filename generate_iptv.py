@@ -82,7 +82,7 @@ def fetch_chninfos(isp: str) -> dict[str, str] | None:
                 chn_code = item.get("chnCode", "")
                 if not chn_code:
                     continue
-                logo = item.get("bigChnIcon") or item.get("chnIcon") or ""
+                logo = item.get("chnIcon") or ""
                 if logo:
                     logo_map[chn_code] = logo
             return logo_map
