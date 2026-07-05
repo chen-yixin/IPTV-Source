@@ -16,7 +16,7 @@ ISP_CONFIGS = [
 ]
 
 CHANNEL_LIST_URL = "http://live.epg.gitv.tv/tagNewestEpgList/{isp}/1/100/0.json"
-LOGO_URL_TEMPLATE = "https://ghproxy.cc/https://raw.githubusercontent.com/fanmingming/live/main/tv/{name}.png"
+LOGO_URL_TEMPLATE = "https://gh-proxy.org/https://raw.githubusercontent.com/fanmingming/live/main/tv/{name}.png"
 
 
 def get_group(chn_name: str, chn_type_id: int | None = None) -> str:
