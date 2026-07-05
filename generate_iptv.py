@@ -49,23 +49,44 @@ def get_group(chn_name: str, chn_type_id: int | None = None) -> str:
     return "其他"
 
 
-def clean_tvg_name(chn_name: str) -> str:
-    return re.sub(r"-?(?:高清|超清|8M)", "", chn_name).strip("- ")
+def normalize_channel_name(chn_name: str) -> str:
+    """将频道名标准化为与EPG display-name一致的格式"""
+    # 去除质量后缀（高清、超清、8M等）
+    name = re.sub(r"-?(?:高清|超清|8M)", "", chn_name).strip("- ")
+
+    # CCTV: "CCTV-1" -> "CCTV1"（与EPG对齐，去掉横杠）
+    name = re.sub(r"CCTV-(\d+)", r"CCTV\1", name)
+
+    # CETV -> 中国教育台
+    cetv_map = {
+        "CETV-1": "中国教育1台",
+        "CETV-2": "中国教育2台",
+        "CETV-3": "中国教育3台",
+        "CETV-4": "中国教育4台",
+    }
+    if name in cetv_map:
+        return cetv_map[name]
+
+    # 海南卫视 -> 旅游卫视（EPG使用旧名称）
+    if name == "海南卫视":
+        return "旅游卫视"
+
+    return name
 
 
 def format_extinf(channel: dict, logo_url: str = "") -> str:
     chn_name = channel.get("chnName", "")
     chn_type_id = channel.get("chnTypeId")
     group = get_group(chn_name, chn_type_id)
-    tvg_name = clean_tvg_name(chn_name)
+    display_name = normalize_channel_name(chn_name)
     tvg_id = channel.get("chnCode", "")
 
     extinf = (
         f'#EXTINF:-1 group-title="{group}"'
-        f' tvg-name="{tvg_name}"'
+        f' tvg-name="{display_name}"'
         f' tvg-id="{tvg_id}"'
         f' tvg-logo="{logo_url}",'
-        f'{chn_name}'
+        f'{display_name}'
     )
     return extinf
 
